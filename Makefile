@@ -4,7 +4,7 @@
 BUILD_DIR = build
 CMAKE_OPTIONS = ..
 MAKE_OPTIONS = -j8
-EXEC = $(BUILD_DIR)/LatexTreeViewer
+EXEC = $(BUILD_DIR)/CompilationSelective
 
 # Objectif par défaut
 all: $(EXEC)

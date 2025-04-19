@@ -27,7 +27,7 @@ Une application Qt6 pour compiler sélectivement des parties d’un document LaT
 
 1. Cloner le dépôt :
    ```bash
-   git clone https://votre-repo/CompilationSelective.git
+   git clone https://github.com/mmaunier/CompilationSelective.git
    cd CompilationSelective
    ```
 2. Créer et accéder au répertoire de build :
