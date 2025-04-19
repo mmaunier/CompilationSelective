@@ -44,7 +44,7 @@ Une application Qt6 pour compiler sélectivement des parties d’un document LaT
    ```
 5. Lancer l’application :
    ```bash
-   ./LatexTreeViewer
+   ./CompilationSelective
    ```
    ou via le Makefile racine :
    ```bash
@@ -56,9 +56,17 @@ Une application Qt6 pour compiler sélectivement des parties d’un document LaT
 ```
 CompilationSelective/
 ├── build/                        # Répertoire de build généré
+├── images/                       # Logos et icônes   
+│   ├── logo_16.png
+│   ├── logo_32.png        
+│   ├── logo_48.png  
+│   ├── logo_64.png        
+│   ├── logo_128.png   
+│   └── logo.png 
 ├── resources/                    # Ressources Qt (images, lastfile.json)
-│   ├── images/                   # Logos et icônes
 │   └── lastfile.json             # Dernier fichier ouvert
+├── screeshots/                   # Captures d'écran de l'application
+│   └── apercu.png                # Aperçu de l'application
 ├── src/                          # Code source C++
 │   ├── latexassembler.h/.cpp    
 │   ├── latexparser.h/.cpp       
@@ -67,6 +75,7 @@ CompilationSelective/
 │   └── processrunner.h/.cpp     
 ├── CMakeLists.txt                # Configuration CMake
 ├── Makefile                      # Script de build et gestion
+├── README.md                     # Documentation du projet
 └── main.cpp                      # Point d'entrée de l'application
 ```
 
