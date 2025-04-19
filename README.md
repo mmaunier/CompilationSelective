@@ -11,7 +11,7 @@ Une application Qt6 pour compiler sélectivement des parties d’un document LaT
 - **Compilation partielle** : sections cochées uniquement
 - **Recompilation** intégrale du chapitre ou du document complet
 - **Sorties** de compilation dans trois onglets (Partiel, Chapitre, Document)
-- **Multi-threading** : utilisation de `QThread` pour la compilation séparées des 3 parties
+- **Multi-threading** : utilisation de `QProcess` pour la compilation séparées des 3 parties
 - **Ouverture automatique** du PDF généré (document Partiel)
 - **Annulation** de la compilation en cours
 - **Sauvegarde** du dernier fichier ouvert et des options de compilation
