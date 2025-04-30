@@ -73,18 +73,18 @@ void ProcessRunner::onReadyReadStandardOutput()
     QString text = QString::fromUtf8(output);
     m_fullOutput += text;
     
-    if (m_outputWidget) {
-        // Explicitement capturer un pointeur local pour éviter les mélanges
-        QTextEdit* currentWidget = m_outputWidget;
-        
-        // Vérifier que le widget est toujours valide
-        if (currentWidget) {
-            currentWidget->append(text);
-            // Faire défiler vers le bas pour voir les dernières lignes
-            currentWidget->verticalScrollBar()->setValue(
-                currentWidget->verticalScrollBar()->maximum());
-        }
-    }
+    // Émettre le signal pour chaque ligne
+    emit newOutputLine(text);
+    
+    // Ne plus ajouter directement au widget (ou en commentaire pour debug)
+    // if (m_outputWidget) {
+    //     QTextEdit* currentWidget = m_outputWidget;
+    //     if (currentWidget) {
+    //         currentWidget->append(text);
+    //         currentWidget->verticalScrollBar()->setValue(
+    //             currentWidget->verticalScrollBar()->maximum());
+    //     }
+    // }
 }
 
 void ProcessRunner::onReadyReadStandardError()
@@ -95,17 +95,13 @@ void ProcessRunner::onReadyReadStandardError()
     QString text = QString::fromUtf8(output);
     m_fullOutput += text;
     
-    if (m_outputWidget) {
-        // Explicitement capturer un pointeur local pour éviter les mélanges
-        QTextEdit* currentWidget = m_outputWidget;
-        
-        // Vérifier que le widget est toujours valide
-        if (currentWidget) {
-            currentWidget->append(text);
-            currentWidget->verticalScrollBar()->setValue(
-                currentWidget->verticalScrollBar()->maximum());
-        }
-    }
+    // Émettre le signal pour chaque ligne
+    emit newOutputLine(text);
+    
+    // Ne plus ajouter directement au widget (ou en commentaire pour debug)
+    // if (m_outputWidget) {
+    //    // ...même code commenté que ci-dessus
+    // }
 }
 
 void ProcessRunner::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
@@ -113,8 +109,17 @@ void ProcessRunner::onProcessFinished(int exitCode, QProcess::ExitStatus exitSta
     m_lastExitCode = exitCode;
     emit processFinished(exitCode, exitStatus);
     
-    // Afficher le statut de sortie
-    if (m_outputWidget) {
-        m_outputWidget->append(QString("\nProcessus terminé avec code : %1").arg(exitCode));
+    // Créer le message de statut selon le code de sortie
+    QString statusMessage;
+    
+    if (exitCode == 0) {
+        // Code de sortie 0 = succès
+        statusMessage = QString("\nProcessus terminé avec code : %1").arg(exitCode);
+    } else {
+        // Code de sortie non-zéro = échec (sera détecté comme une erreur par le mot "erreur")
+        statusMessage = QString("\nProcessus terminé avec ERREUR (code : %1)").arg(exitCode);
     }
+    
+    // Émettre le signal pour que le message soit traité par highlightAndAppendLatexOutput
+    emit newOutputLine(statusMessage);
 }

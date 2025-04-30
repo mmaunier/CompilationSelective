@@ -17,7 +17,10 @@ LatexAssembler::LatexAssembler(QObject* parent) : QObject(parent), m_isCompiling
                                                 m_isCompilingFullDocument(false), m_compilationCount(0), 
                                                 m_chapterCompilationCount(0), m_fullDocumentCompilationCount(0),
                                                 m_partialOutputWidget(nullptr), m_chapterOutputWidget(nullptr),
-                                                m_fullDocumentOutputWidget(nullptr)
+                                                m_fullDocumentOutputWidget(nullptr),
+                                                m_processRunner(new ProcessRunner(this)),
+                                                m_chapterProcessRunner(new ProcessRunner(this)),
+                                                m_fullDocumentProcessRunner(new ProcessRunner(this))
 {
     // S'assurer que les trois répertoires temporaires sont créés correctement
     if (!s_partielTempDir.isValid()) {
@@ -37,10 +40,6 @@ LatexAssembler::LatexAssembler(QObject* parent) : QObject(parent), m_isCompiling
     } else {
         qDebug() << "Répertoire temporaire pour le document complet créé:" << s_documentTempDir.path();
     }
-    
-    m_processRunner = new ProcessRunner(this);
-    m_chapterProcessRunner = new ProcessRunner(this);
-    m_fullDocumentProcessRunner = new ProcessRunner(this);
 
     // Connecteur UNIQUEMENT pour le processus de document partiel
     connect(m_processRunner, &ProcessRunner::processFinished, this, [this](int exitCode, QProcess::ExitStatus exitStatus)
@@ -257,6 +256,19 @@ LatexAssembler::LatexAssembler(QObject* parent) : QObject(parent), m_isCompiling
             }
         }
     }, Qt::QueuedConnection);
+
+    // Connexions pour la sortie brute
+    connect(m_processRunner, &ProcessRunner::newOutputLine, this, [this](const QString& line){
+        emit rawPartialOutputReady(line);
+    });
+
+    connect(m_chapterProcessRunner, &ProcessRunner::newOutputLine, this, [this](const QString& line){
+        emit rawChapterOutputReady(line);
+    });
+
+    connect(m_fullDocumentProcessRunner, &ProcessRunner::newOutputLine, this, [this](const QString& line){
+        emit rawDocumentOutputReady(line);
+    });
 }
 
 LatexAssembler::~LatexAssembler()

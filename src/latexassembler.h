@@ -58,6 +58,11 @@ signals:
     void fullDocumentCompilationStarted();
     void fullDocumentCompilationProgress(int current, int total);
     void fullDocumentCompilationFinished(bool success, const QString& pdfPath);
+    
+    // Nouveaux signaux pour la sortie brute
+    void rawPartialOutputReady(const QString& line);
+    void rawChapterOutputReady(const QString& line);
+    void rawDocumentOutputReady(const QString& line);
 
 private slots:
     void processNextChapter();
