@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/mireille/Qt/6.9.0/gcc_64/include/**"
+                "/home/mikael/Qt6/6.8.1/gcc_64/include/**"
             ],
             "defines": [],
             "cStandard": "c17",
