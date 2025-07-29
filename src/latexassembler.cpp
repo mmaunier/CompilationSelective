@@ -347,8 +347,7 @@ QVector<QPair<QString, QString>> LatexAssembler::collectSelectedFiles(LatexModel
 {
     QVector<QPair<QString, QString>> selectedFiles;
     
-    // Parcourir le modèle pour trouver les fichiers sélectionnés
-    // Cette fonction est une simplification - vous devez l'adapter à la structure de votre modèle
+    // Fonction récursive simple
     std::function<void(const QModelIndex&)> collectFiles = [&](const QModelIndex& parent) {
         for (int i = 0; i < model->rowCount(parent); ++i) {
             QModelIndex index = model->index(i, 0, parent);
@@ -357,25 +356,38 @@ QVector<QPair<QString, QString>> LatexAssembler::collectSelectedFiles(LatexModel
             QString nodeName = model->data(index, Qt::DisplayRole).toString();
             QString nodePath = model->data(index, Qt::ToolTipRole).toString();
             
-            // Ignorer les nœuds de groupe (PEDA, DOCS, EVALS)
-            if (nodeName == "PEDA" || nodeName == "DOCS" || nodeName == "EVALS") {
-                // Parcourir les enfants de ces groupes
-                collectFiles(index);
-            }
-            else if (state == Qt::Checked && !nodePath.isEmpty() && QFile::exists(nodePath)) {
-                // Ajouter le fichier à la liste s'il est coché et existe
-                selectedFiles.append(qMakePair(nodeName, nodePath));
-            }
-            
-            // Récursivement traiter les enfants si ce n'est pas un groupe
-            if (model->hasChildren(index) && nodeName != "PEDA" && nodeName != "DOCS" && nodeName != "EVALS") {
-                collectFiles(index);
+            // Si le nœud est coché ou partiellement coché
+            if (state == Qt::Checked || state == Qt::PartiallyChecked) {
+                
+                // Si c'est un fichier .tex qui existe
+                if (!nodePath.isEmpty() && QFile::exists(nodePath) && nodePath.endsWith(".tex")) {
+                    
+                    // RÈGLE SIMPLE: Exclure UNIQUEMENT les fichiers qui se terminent par "_cours.tex"
+                    if (nodePath.endsWith("_cours.tex")) {
+                        qDebug() << "Fichier _cours exclu de la compilation partielle:" << nodePath;
+                    } else {
+                        // Ajouter tous les autres fichiers .tex
+                        selectedFiles.append(qMakePair(nodeName, nodePath));
+                        qDebug() << "Fichier ajouté à la compilation partielle:" << nodePath;
+                    }
+                }
+                
+                // Explorer récursivement les enfants dans tous les cas (dossiers ou fichiers _cours)
+                if (model->hasChildren(index)) {
+                    collectFiles(index);
+                }
             }
         }
     };
     
     // Commencer la collecte depuis la racine
     collectFiles(QModelIndex());
+    
+    qDebug() << "=== RÉSUMÉ COMPILATION PARTIELLE ===";
+    qDebug() << "Total des fichiers collectés:" << selectedFiles.size();
+    for (const auto& file : selectedFiles) {
+        qDebug() << "Fichier à inclure:" << file.first << "-" << file.second;
+    }
     
     return selectedFiles;
 }
