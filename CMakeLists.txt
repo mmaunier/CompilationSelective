@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
-project(CompilationSelective LANGUAGES CXX)
+project(CompilationSelective 
+    VERSION 0.1.1
+    LANGUAGES CXX
+)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_AUTOMOC ON)
@@ -22,4 +25,9 @@ target_link_libraries(${PROJECT_NAME}
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
+)
+
+# Ajouter la version dans le code
+target_compile_definitions(${PROJECT_NAME} PRIVATE 
+    APP_VERSION="${PROJECT_VERSION}"
 )
