@@ -48,6 +48,13 @@ private slots:
 private:
     QProcess* m_process = nullptr;
     QTextEdit* m_outputWidget = nullptr;
-    int m_lastExitCode = 0;
     QString m_fullOutput;
+    int m_lastExitCode = -1;
+    
+    // Ajout des buffers pour reconstituer les lignes
+    QString m_outputBuffer;
+    QString m_errorBuffer;
+    
+    // Méthode pour traiter et afficher les lignes
+    void processAndDisplayLine(const QString& line);
 };

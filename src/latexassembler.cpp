@@ -151,8 +151,9 @@ LatexAssembler::LatexAssembler(QObject* parent) : QObject(parent), m_isCompiling
                  << "-shell-escape"
                  << "-interaction=nonstopmode"
                  << "-file-line-error"
+                 << "-max-print-line=10000" // Ajouter cette option
                  << m_currentChapterTempFile;
-            
+
             m_chapterProcessRunner->runCommand("lualatex", args, m_chapterOutputWidget, tempFileInfo.absolutePath());
         }
         else {
@@ -223,8 +224,9 @@ LatexAssembler::LatexAssembler(QObject* parent) : QObject(parent), m_isCompiling
                  << "-shell-escape"
                  << "-interaction=nonstopmode"
                  << "-file-line-error"
+                 << "-max-print-line=10000" // Ajouter cette option
                  << m_fullDocumentTempFile;
-            
+
             m_fullDocumentProcessRunner->runCommand("lualatex", args, m_fullDocumentOutputWidget, tempFileInfo.absolutePath());
             emit fullDocumentCompilationProgress(m_fullDocumentCompilationCount, 5);
         }
@@ -256,19 +258,6 @@ LatexAssembler::LatexAssembler(QObject* parent) : QObject(parent), m_isCompiling
             }
         }
     }, Qt::QueuedConnection);
-
-    // Connexions pour la sortie brute
-    connect(m_processRunner, &ProcessRunner::newOutputLine, this, [this](const QString& line){
-        emit rawPartialOutputReady(line);
-    });
-
-    connect(m_chapterProcessRunner, &ProcessRunner::newOutputLine, this, [this](const QString& line){
-        emit rawChapterOutputReady(line);
-    });
-
-    connect(m_fullDocumentProcessRunner, &ProcessRunner::newOutputLine, this, [this](const QString& line){
-        emit rawDocumentOutputReady(line);
-    });
 }
 
 LatexAssembler::~LatexAssembler()
@@ -503,8 +492,9 @@ void LatexAssembler::compilePartialDocument(const QString& tempFilePath, QTextEd
          << "-shell-escape"
          << "-interaction=nonstopmode"
          << "-file-line-error"
+         << "-max-print-line=10000" // Ajouter cette option
          << tempFilePath;
-    
+
     QFileInfo tempFileInfo(tempFilePath);
     
     // Lancer le processus
@@ -879,8 +869,9 @@ void LatexAssembler::processNextChapter()
          << "-shell-escape"
          << "-interaction=nonstopmode"
          << "-file-line-error"
+         << "-max-print-line=10000" // Ajouter cette option
          << tempFilePath;
-    
+
     // En cas d'erreur au lancement
     if (!m_chapterProcessRunner->runCommand("lualatex", args, m_chapterOutputWidget, tempFileInfo.absolutePath())) {
         emit compilationError("Échec du lancement de la compilation pour le chapitre " + chapter.name);
@@ -981,8 +972,9 @@ void LatexAssembler::compileFullDocument(LatexModel* model, QTextEdit* outputWid
          << "-shell-escape"
          << "-interaction=nonstopmode"
          << "-file-line-error"
+         << "-max-print-line=10000" // Ajouter cette option
          << tempFilePath;
-    
+
     // Lancer la compilation
     if (!m_fullDocumentProcessRunner->runCommand("lualatex", args, m_fullDocumentOutputWidget, tempFileInfo.absolutePath())) {
         emit compilationError("Échec du lancement de la compilation du document complet");
@@ -1206,8 +1198,9 @@ void LatexAssembler::processFullDocument()
          << "-shell-escape"
          << "-interaction=nonstopmode"
          << "-file-line-error"
+         << "-max-print-line=10000" // Ajouter cette option
          << m_fullDocumentTempFile;
-    
+
     if (!m_fullDocumentProcessRunner->runCommand("lualatex", args, m_fullDocumentOutputWidget, tempFileInfo.absolutePath())) {
         emit compilationError("Échec du lancement de la compilation du document complet");
         m_isCompilingFullDocument = false;

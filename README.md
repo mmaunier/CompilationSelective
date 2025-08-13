@@ -11,7 +11,7 @@ Une application Qt6 pour compiler sélectivement des parties d’un document LaT
 - **Compilation partielle** : sections cochées uniquement
 - **Recompilation** intégrale du chapitre ou du document complet
 - **Sorties** de compilation dans trois onglets (Partiel, Chapitre, Document)
-- **Multi-threading** : utilisation de `QProcess` pour la compilation séparées des 3 parties
+- **Multi-threading** : utilisation de `QProcess` pour la compilation séparée des 3 parties
 - **Ouverture automatique** du PDF généré (document Partiel)
 - **Annulation** de la compilation en cours
 - **Sauvegarde** du dernier fichier ouvert et des options de compilation
@@ -51,7 +51,14 @@ Une application Qt6 pour compiler sélectivement des parties d’un document LaT
    make run
    ```
 
-## Structure du projet
+## 🎨 À propos du style graphique
+
+- **Style par défaut** : l’application utilise le style Qt6 “Fusion”, moderne et multiplateforme.
+- **Arrondis et couleurs** : si le style natif KDE (Breeze6) n’est pas disponible, un style CSS personnalisé est appliqué pour arrondir les boutons et moderniser l’interface.
+- **Thèmes KDE/Plasma** : si vous utilisez une installation Qt6 personnalisée, l’intégration automatique avec le thème global KDE (Breeze, Breath…) n’est pas garantie.  
+  Pour bénéficier du style natif KDE, il est recommandé d’utiliser le Qt6 système de votre distribution.
+
+## 📂 Fichiers et répertoires
 
 ```
 CompilationSelective/
@@ -65,7 +72,7 @@ CompilationSelective/
 │   └── logo.png 
 ├── resources/                    # Ressources Qt (images, lastfile.json)
 │   └── lastfile.json             # Dernier fichier ouvert
-├── screeshots/                   # Captures d'écran de l'application
+├── screenshots/                  # Captures d'écran de l'application
 │   └── apercu.png                # Aperçu de l'application
 ├── src/                          # Code source C++
 │   ├── latexassembler.h/.cpp    

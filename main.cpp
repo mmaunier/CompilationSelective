@@ -9,6 +9,7 @@
 #include <QMainWindow>
 #include <QFileInfo>
 #include <QIcon>
+#include <QTimer>
 #include <QCheckBox>
 #include <QTabWidget>
 #include <QTextEdit>
@@ -17,6 +18,7 @@
 #include <QSplitter>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QStyleFactory>
 #include "latexmodel.h"
 #include "lastfilehelper.h"
 #include "processrunner.h"
@@ -79,102 +81,11 @@ bool hasCheckedNodesRecursive(QAbstractItemModel* model, const QModelIndex& pare
     return false;
 }
 
-// Fonction pour mettre en évidence les erreurs et avertissements LaTeX
-void highlightAndAppendLatexOutput(QTextEdit* output, const QString& line)
-{
-    // Au début de highlightAndAppendLatexOutput
-    qDebug() << "Ligne reçue:" << line;
-    
-    // Convertir la ligne en HTML sécurisé pour éviter toute injection
-    QString htmlSafeLine = line.toHtmlEscaped();
-    
-    // VÉRIFICATION PRIORITAIRE pour le message de succès - MOTIF MODIFIÉ
-    // Recherche de toute variante du message de processus terminé avec code 0
-    QRegularExpression successPattern("Processus.*termin.*code.*0", 
-                                     QRegularExpression::CaseInsensitiveOption);
-    if (line.contains(successPattern)) {
-        qDebug() << "MESSAGE DE SUCCÈS DÉTECTÉ!";
-        
-        // Force l'insertion HTML directe avec une couleur verte
-        output->append("<span style='color: #00a000; font-weight: bold;'>" + 
-                      htmlSafeLine + "</span>");
-        
-        // Défiler vers le bas
-        QScrollBar* scrollBar = output->verticalScrollBar();
-        scrollBar->setValue(scrollBar->maximum());
-        
-        return; // IMPORTANT : sortir de la fonction IMMÉDIATEMENT
-    }
-
-    // Mots-clés inchangés
-    static const QStringList errorKeywords = {
-        "error", "erreur", "Error", "Erreur", "ERROR", "ERREUR",
-        "undefined", "Undefined", "Emergency stop", "fatal",
-        "cannot find", "not found", "impossible", "Impossible",
-        "File ended", "Runaway argument", "missing", "Missing",
-        "Too many }", "Illegal unit", "Double subscript"
-    };
-    
-    static const QStringList warningKeywords = {
-        "warning", "Warning", "WARNING", "avertissement", "Avertissement",
-        "overfull", "Overfull", "underfull", "Underfull",
-        "fontshape", "hbox", "vbox", "LaTeX Font Warning"
-    };
-
-    // Vérification pour les erreurs et avertissements
-    bool isError = false;
-    bool isWarning = false;
-    
-    // Vérification des erreurs LaTeX commençant par '! '
-    if (line.contains("! ")) {
-        isError = true;
-    } else {
-        // Ignorer les lignes de séparation
-        bool isSeparator = line.contains("***");
-        
-        if (!isSeparator) {
-            // Vérification mots-clés d'erreur
-            for (const QString& keyword : errorKeywords) {
-                QRegularExpression re("\\b" + QRegularExpression::escape(keyword) + "\\b", 
-                                     QRegularExpression::CaseInsensitiveOption);
-                if (line.contains(re)) {
-                    isError = true;
-                    break;
-                }
-            }
-            
-            // Si pas d'erreur, vérifier les avertissements
-            if (!isError) {
-                for (const QString& keyword : warningKeywords) {
-                    QRegularExpression re("\\b" + QRegularExpression::escape(keyword) + "\\b", 
-                                         QRegularExpression::CaseInsensitiveOption);
-                    if (line.contains(re)) {
-                        isWarning = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    // Utiliser du HTML pour tous les types de texte
-    if (isError) {
-        output->append("<span style='color: red;'>" + htmlSafeLine + "</span>");
-    } else if (isWarning) {
-        output->append("<span style='color: #ffa500;'>" + htmlSafeLine + "</span>"); // Orange
-    } else {
-        output->append(htmlSafeLine);  // Texte normal sans balises de style
-    }
-    
-    // Défiler vers le bas
-    QScrollBar* scrollBar = output->verticalScrollBar();
-    scrollBar->setValue(scrollBar->maximum());
-}
-
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
 
+    QApplication app(argc, argv);
+    
     // Définir l'icône de l'application
     QIcon appIcon;
     appIcon.addFile(":/images/logo_16.png", QSize(16, 16));
@@ -318,22 +229,6 @@ int main(int argc, char *argv[])
 
     // Créer notre assembleur LaTeX
     LatexAssembler *latexAssembler = new LatexAssembler(&window);
-
-    // Connecter les signaux de sortie brute aux fonctions de coloration
-    QObject::connect(latexAssembler, &LatexAssembler::rawPartialOutputReady, 
-                    [partialOutputText](const QString& line) {
-        highlightAndAppendLatexOutput(partialOutputText, line);
-    });
-
-    QObject::connect(latexAssembler, &LatexAssembler::rawChapterOutputReady, 
-                    [chapterOutputText](const QString& line) {
-        highlightAndAppendLatexOutput(chapterOutputText, line);
-    });
-
-    QObject::connect(latexAssembler, &LatexAssembler::rawDocumentOutputReady, 
-                    [documentOutputText](const QString& line) {
-        highlightAndAppendLatexOutput(documentOutputText, line);
-    });
 
     // Fonction de sauvegarde des options
     auto saveOptions = [&]() {
@@ -588,6 +483,5 @@ int main(int argc, char *argv[])
     
     window.setCentralWidget(centralWidget);
     window.show();
-    
     return app.exec();
 }

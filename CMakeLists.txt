@@ -7,6 +7,10 @@ project(CompilationSelective
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
+# set(CMAKE_PREFIX_PATH "/home/mikael/Qt/6.9.1/gcc_64/lib/cmake")
+# set(QT_HOST_PATH "/home/mikael/Qt/6.9.1")
+# set(Qt6_DIR "$ENV{HOME}/Qt/6.9.1/gcc_64/lib/cmake/Qt6")
+
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 

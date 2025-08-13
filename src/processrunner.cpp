@@ -1,6 +1,7 @@
 #include "processrunner.h"
 #include <QDateTime>
 #include <QScrollBar>
+#include <QRegularExpression>
 
 ProcessRunner::ProcessRunner(QObject* parent)
     : QObject(parent)
@@ -12,15 +13,16 @@ bool ProcessRunner::runCommand(const QString& program, const QStringList& argume
 {
     // Nettoyer le processus précédent s'il existe
     if (m_process) {
-        if (m_process->state() != QProcess::NotRunning) {
-            m_process->terminate();
-            m_process->waitForFinished(3000);
-        }
-        delete m_process;
+        m_process->deleteLater();
+        m_process = nullptr;
     }
     
     m_outputWidget = outputWidget;
     m_fullOutput.clear();
+    
+    // IMPORTANT: Vider les buffers au début
+    m_outputBuffer.clear();
+    m_errorBuffer.clear();
     
     // Créer un nouveau processus
     m_process = new QProcess(this);
@@ -67,59 +69,189 @@ bool ProcessRunner::isRunning() const
 
 void ProcessRunner::onReadyReadStandardOutput()
 {
-    if (!m_process) return;
+    if (!m_process || !m_outputWidget) return;
     
-    QByteArray output = m_process->readAllStandardOutput();
-    QString text = QString::fromUtf8(output);
-    m_fullOutput += text;
+    QByteArray data = m_process->readAllStandardOutput();
+    QString output = QString::fromUtf8(data);
+    m_fullOutput.append(output);
     
-    // Émettre le signal pour chaque ligne
-    emit newOutputLine(text);
+    // Ajouter au buffer
+    m_outputBuffer.append(output);
     
-    // Ne plus ajouter directement au widget (ou en commentaire pour debug)
-    // if (m_outputWidget) {
-    //     QTextEdit* currentWidget = m_outputWidget;
-    //     if (currentWidget) {
-    //         currentWidget->append(text);
-    //         currentWidget->verticalScrollBar()->setValue(
-    //             currentWidget->verticalScrollBar()->maximum());
-    //     }
-    // }
+    // Traiter les lignes complètes (séparées par \n)
+    QStringList lines = m_outputBuffer.split('\n');
+    
+    // Garder la dernière partie (potentiellement incomplète) dans le buffer
+    if (!m_outputBuffer.endsWith('\n')) {
+        m_outputBuffer = lines.takeLast();
+    } else {
+        m_outputBuffer.clear();
+    }
+    
+    // Traiter chaque ligne complète
+    for (const QString& line : lines) {
+        processAndDisplayLine(line);
+    }
 }
 
 void ProcessRunner::onReadyReadStandardError()
 {
-    if (!m_process) return;
+    if (!m_process || !m_outputWidget) return;
     
-    QByteArray output = m_process->readAllStandardError();
-    QString text = QString::fromUtf8(output);
-    m_fullOutput += text;
+    QByteArray data = m_process->readAllStandardError();
+    QString output = QString::fromUtf8(data);
+    m_fullOutput.append(output);
     
-    // Émettre le signal pour chaque ligne
-    emit newOutputLine(text);
+    // Même traitement pour stderr
+    m_errorBuffer.append(output);
     
-    // Ne plus ajouter directement au widget (ou en commentaire pour debug)
-    // if (m_outputWidget) {
-    //    // ...même code commenté que ci-dessus
-    // }
+    QStringList lines = m_errorBuffer.split('\n');
+    
+    if (!m_errorBuffer.endsWith('\n')) {
+        m_errorBuffer = lines.takeLast();
+    } else {
+        m_errorBuffer.clear();
+    }
+    
+    for (const QString& line : lines) {
+        processAndDisplayLine(line);
+    }
 }
 
 void ProcessRunner::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    m_lastExitCode = exitCode;
-    emit processFinished(exitCode, exitStatus);
+    // Traiter ce qui reste dans les buffers
+    if (!m_outputBuffer.isEmpty()) {
+        processAndDisplayLine(m_outputBuffer);
+        m_outputBuffer.clear();
+    }
     
-    // Créer le message de statut selon le code de sortie
+    if (!m_errorBuffer.isEmpty()) {
+        processAndDisplayLine(m_errorBuffer);
+        m_errorBuffer.clear();
+    }
+    
+    // Message de fin
     QString statusMessage;
-    
     if (exitCode == 0) {
-        // Code de sortie 0 = succès
         statusMessage = QString("\nProcessus terminé avec code : %1").arg(exitCode);
     } else {
-        // Code de sortie non-zéro = échec (sera détecté comme une erreur par le mot "erreur")
         statusMessage = QString("\nProcessus terminé avec ERREUR (code : %1)").arg(exitCode);
     }
     
-    // Émettre le signal pour que le message soit traité par highlightAndAppendLatexOutput
-    emit newOutputLine(statusMessage);
+    processAndDisplayLine(statusMessage);
+    
+    m_lastExitCode = exitCode;
+    emit processFinished(exitCode, exitStatus);
+}
+
+void ProcessRunner::processAndDisplayLine(const QString& line)
+{
+    if (!m_outputWidget) return;
+    
+    // Ne pas traiter les lignes complètement vides
+    if (line.isEmpty()) {
+        m_outputWidget->append("");
+        return;
+    }
+    
+    // Détection du message de succès
+    QRegularExpression successPattern("Processus.*termin.*code.*0", 
+                                     QRegularExpression::CaseInsensitiveOption);
+    if (line.contains(successPattern)) {
+        QTextCursor cursor = m_outputWidget->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        
+        QTextCharFormat successFormat;
+        successFormat.setForeground(QBrush(QColor("#00a000")));
+        successFormat.setFontWeight(QFont::Bold);
+        cursor.insertText(line + "\n", successFormat);
+        
+        QTextCharFormat defaultFormat;
+        defaultFormat.setForeground(QBrush(Qt::black));
+        defaultFormat.setFontWeight(QFont::Normal);
+        cursor.setCharFormat(defaultFormat);
+        m_outputWidget->setTextCursor(cursor);
+        
+        QScrollBar* scrollBar = m_outputWidget->verticalScrollBar();
+        scrollBar->setValue(scrollBar->maximum());
+        return;
+    }
+    
+    // Détection des erreurs et warnings avec des patterns améliorés
+    bool isError = false;
+    bool isWarning = false;
+    
+    // Patterns pour les erreurs LaTeX
+    static const QStringList errorPatterns = {
+        "^!\\s+",                    // Erreur LaTeX commençant par !
+        "Emergency stop",
+        "Fatal error",
+        "File ended",
+        "Runaway argument",
+        "Double subscript",
+        "Too many \\}",
+        "Illegal unit",
+        "cannot find",
+        "not found"
+    };
+    
+    // Patterns pour les warnings (y compris undefined)
+    static const QStringList warningPatterns = {
+        "Warning:",
+        "warning:",
+        "LaTeX Font Warning",
+        "Package.*Warning",
+        "Overfull",
+        "Underfull",
+        "undefined",              // Déplacé ici pour être en orange
+        "Undefined",
+        "hbox",
+        "vbox",
+        "Font shape.*undefined"   // Font warnings spécifiques
+    };
+    
+    // Vérifier les patterns d'erreur
+    for (const QString& pattern : errorPatterns) {
+        QRegularExpression re(pattern, QRegularExpression::CaseInsensitiveOption);
+        if (line.contains(re)) {
+            isError = true;
+            break;
+        }
+    }
+    
+    // Si ce n'est pas une erreur, vérifier les warnings
+    if (!isError) {
+        for (const QString& pattern : warningPatterns) {
+            if (line.contains(pattern, Qt::CaseInsensitive)) {
+                isWarning = true;
+                break;
+            }
+        }
+    }
+    
+    // Appliquer le formatage
+    QTextCursor cursor = m_outputWidget->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    
+    QTextCharFormat format;
+    if (isError) {
+        format.setForeground(QBrush(Qt::red));
+    } else if (isWarning) {
+        format.setForeground(QBrush(QColor("#ff8800"))); // Orange
+    } else {
+        format.setForeground(QBrush(Qt::black));
+    }
+    
+    cursor.insertText(line + "\n", format);
+    
+    // Réinitialiser le format
+    QTextCharFormat defaultFormat;
+    defaultFormat.setForeground(QBrush(Qt::black));
+    cursor.setCharFormat(defaultFormat);
+    m_outputWidget->setTextCursor(cursor);
+    
+    // Auto-scroll
+    QScrollBar* scrollBar = m_outputWidget->verticalScrollBar();
+    scrollBar->setValue(scrollBar->maximum());
 }
